@@ -333,7 +333,9 @@ export class AuthService {
     return {
       httpOnly: true,
       secure: isProduction,
-      sameSite: "strict" as const,
+      // Use 'lax' in development to allow cross-origin requests from frontend
+      // Use 'strict' in production for better security (same domain)
+      sameSite: isProduction ? ("strict" as const) : ("lax" as const),
       maxAge: isRefreshToken
         ? 7 * 24 * 60 * 60 * 1000 // 7 days
         : 24 * 60 * 60 * 1000, // 24 hours
