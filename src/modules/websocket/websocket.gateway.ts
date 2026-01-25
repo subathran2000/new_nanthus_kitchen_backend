@@ -32,6 +32,12 @@ interface NewsletterUpdateData extends WebSocketEventData {
 @WebSocketGateway({
   namespace: "/admin",
   transports: ["websocket", "polling"],
+  cors: {
+    origin: process.env.FRONTEND_URL?.split(",").map((url) => url.trim()) || [
+      "http://localhost:5173",
+    ],
+    credentials: true,
+  },
 })
 export class AdminWebSocketGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
@@ -48,27 +54,6 @@ export class AdminWebSocketGateway
   ) {}
 
   afterInit(server: Server) {
-    // Configure CORS dynamically from environment
-    const frontendUrl = this.configService.get<string>(
-      "FRONTEND_URL",
-      "http://localhost:5173",
-    );
-    const allowedOrigins = frontendUrl.split(",").map((url) => url.trim());
-
-    server.engine.on(
-      "initial_headers",
-      (
-        headers: Record<string, string>,
-        req: { headers: { origin?: string } },
-      ) => {
-        const origin = req.headers.origin;
-        if (origin && allowedOrigins.includes(origin)) {
-          headers["Access-Control-Allow-Origin"] = origin;
-          headers["Access-Control-Allow-Credentials"] = "true";
-        }
-      },
-    );
-
     this.logger.log("WebSocket Gateway initialized");
   }
 
