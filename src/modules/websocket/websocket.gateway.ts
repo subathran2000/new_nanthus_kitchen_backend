@@ -33,10 +33,36 @@ interface NewsletterUpdateData extends WebSocketEventData {
   namespace: "/admin",
   transports: ["websocket", "polling"],
   cors: {
-    origin: process.env.FRONTEND_URL?.split(",").map((url) => url.trim()) || [
-      "http://localhost:5173",
-    ],
+    origin: (
+      origin: string,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      // Get allowed origins from environment
+      const allowedOrigins = process.env.FRONTEND_URL?.split(",").map((url) =>
+        url.trim(),
+      ) || ["http://localhost:5173", "http://localhost:3002"];
+
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      // Check if origin is allowed
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        // In development, allow all origins
+        if (process.env.NODE_ENV !== "production") {
+          callback(null, true);
+        } else {
+          console.warn(`WebSocket CORS blocked origin: ${origin}`);
+          callback(new Error("Not allowed by CORS"), false);
+        }
+      }
+    },
     credentials: true,
+    methods: ["GET", "POST"],
   },
 })
 export class AdminWebSocketGateway

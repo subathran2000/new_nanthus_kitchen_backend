@@ -61,12 +61,33 @@ async function bootstrap() {
     "http://localhost:5173",
   );
   const allowedOrigins = frontendUrl.split(",").map((url) => url.trim());
+
+  // Log configured origins for debugging
+  logger.log(`Configured CORS origins: ${allowedOrigins.join(", ")}`);
+
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        // In development, log but allow the request
+        if (!isProduction) {
+          logger.warn(
+            `CORS: Allowing unlisted origin in development: ${origin}`,
+          );
+          callback(null, true);
+        } else {
+          logger.warn(
+            `CORS: Blocked origin: ${origin}. Allowed: ${allowedOrigins.join(", ")}`,
+          );
+          callback(new Error("Not allowed by CORS"));
+        }
       }
     },
     credentials: true,

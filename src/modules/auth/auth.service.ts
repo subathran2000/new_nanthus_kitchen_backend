@@ -329,13 +329,32 @@ export class AuthService {
   getCookieOptions(isRefreshToken = false) {
     const isProduction =
       this.configService.get<string>("NODE_ENV") === "production";
+    
+    // For cross-origin requests (different ports or domains), we need sameSite: "none" with secure: true
+    // This is required when frontend and backend are on different origins (e.g., port 3002 vs 5000)
+    const frontendUrl = this.configService.get<string>("FRONTEND_URL", "");
+    const backendUrl = this.configService.get<string>("BACKEND_URL", "");
+    
+    // Check if we're in a cross-origin setup (different URLs/ports)
+    // In production with different ports, we need sameSite: none and secure: true
+    let isCrossOrigin = false;
+    if (frontendUrl && backendUrl) {
+      // Extract the base (protocol + host) without port for comparison
+      const frontendBase = frontendUrl.split(",")[0]?.trim() || "";
+      const backendBase = backendUrl.split(",")[0]?.trim() || "";
+      isCrossOrigin = frontendBase !== backendBase;
+    }
+    
+    // In production, always use sameSite: none for cross-origin cookie support
+    const needsCrossOriginCookies = isProduction || isCrossOrigin;
 
     return {
       httpOnly: true,
-      secure: isProduction,
-      // Use 'lax' in development to allow cross-origin requests from frontend
-      // Use 'strict' in production for better security (same domain)
-      sameSite: isProduction ? ("strict" as const) : ("lax" as const),
+      // secure must be true when sameSite is "none" 
+      secure: needsCrossOriginCookies ? true : false,
+      // Use 'none' for cross-origin requests (required for cookies to work across different ports/domains)
+      // Use 'lax' for same-origin in development
+      sameSite: needsCrossOriginCookies ? ("none" as const) : ("lax" as const),
       maxAge: isRefreshToken
         ? 7 * 24 * 60 * 60 * 1000 // 7 days
         : 24 * 60 * 60 * 1000, // 24 hours
