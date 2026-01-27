@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, LessThanOrEqual, MoreThanOrEqual } from "typeorm";
 import { Special } from "./entities/special.entity";
@@ -23,6 +23,8 @@ import { UploadService } from "../upload/upload.service";
  */
 @Injectable()
 export class SpecialsService {
+  private readonly logger = new Logger(SpecialsService.name);
+
   constructor(
     @InjectRepository(Special)
     private readonly specialRepository: Repository<Special>,
@@ -191,7 +193,7 @@ export class SpecialsService {
           const filePath = imageUrl.replace(/^\/uploads\//, "");
           await this.uploadService.deleteFile(filePath);
         } catch (error) {
-          console.warn(`Failed to delete old image ${imageUrl}:`, error);
+          this.logger.warn(`Failed to delete old image ${imageUrl}:`, error);
         }
       }
     }
@@ -210,7 +212,7 @@ export class SpecialsService {
           const filePath = imageUrl.replace(/^\/uploads\//, "");
           await this.uploadService.deleteFile(filePath);
         } catch (error) {
-          console.warn(`Failed to delete image ${imageUrl}:`, error);
+          this.logger.warn(`Failed to delete image ${imageUrl}:`, error);
         }
       }
     }
@@ -259,7 +261,7 @@ export class SpecialsService {
   // Get daily specials organized by day
   async getDailySpecials(): Promise<Record<DayOfWeek, Special[]>> {
     const specials = await this.specialRepository.find({
-      where: { type: "daily" as any, isActive: true },
+      where: { type: SpecialType.DAILY, isActive: true },
       order: { sortOrder: "ASC" },
     });
 

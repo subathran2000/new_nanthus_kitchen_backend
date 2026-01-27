@@ -78,7 +78,7 @@ export class NewsletterController {
 
   @Post("subscribers")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Admin creates a subscriber (pre-verified)" })
   @ApiResponse({ status: 201, description: "Subscriber created" })
@@ -114,7 +114,7 @@ export class NewsletterController {
 
   @Patch("subscribers/:id")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Update subscriber" })
   @ApiResponse({ status: 200, description: "Subscriber updated" })
@@ -142,7 +142,7 @@ export class NewsletterController {
 
   @Post("campaigns")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Create a campaign" })
   @ApiResponse({ status: 201, description: "Campaign created" })
@@ -180,7 +180,7 @@ export class NewsletterController {
 
   @Patch("campaigns/:id")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Update campaign" })
   @ApiResponse({ status: 200, description: "Campaign updated" })
@@ -195,7 +195,7 @@ export class NewsletterController {
 
   @Delete("campaigns/:id")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete campaign" })
@@ -211,7 +211,7 @@ export class NewsletterController {
 
   @Post("campaigns/test")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Send test email" })
@@ -222,7 +222,7 @@ export class NewsletterController {
 
   @Post("campaigns/:id/send")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Send campaign to subscribers" })
   @ApiResponse({ status: 200, description: "Campaign sent" })

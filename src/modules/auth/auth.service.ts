@@ -87,10 +87,20 @@ export class AuthService {
         // Super admin can create any role they specify
         role = registerDto.role || UserRole.VISITOR;
       } else if (currentUser.role === UserRole.ADMIN) {
-        // Admin can only create visitors
+        // Admin can create visitors and managers
+        if (registerDto.role && 
+            registerDto.role !== UserRole.VISITOR && 
+            registerDto.role !== UserRole.MANAGER) {
+          throw new ForbiddenException(
+            "Admins can only create visitor or manager accounts",
+          );
+        }
+        role = registerDto.role || UserRole.VISITOR;
+      } else if (currentUser.role === UserRole.MANAGER) {
+        // Manager can only create visitors
         if (registerDto.role && registerDto.role !== UserRole.VISITOR) {
           throw new ForbiddenException(
-            "Admins can only create visitor accounts",
+            "Managers can only create visitor accounts",
           );
         }
         role = UserRole.VISITOR;
@@ -309,16 +319,23 @@ export class AuthService {
   private async generateTokens(user: User) {
     const payload = { sub: user.id, email: user.email, role: user.role };
 
+    const jwtSecret = this.configService.get<string>("JWT_SECRET");
+    const jwtRefreshSecret = this.configService.get<string>("JWT_REFRESH_SECRET");
+
+    if (!jwtSecret) {
+      throw new Error("JWT_SECRET environment variable is required");
+    }
+    if (!jwtRefreshSecret) {
+      throw new Error("JWT_REFRESH_SECRET environment variable is required");
+    }
+
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        secret:
-          this.configService.get<string>("JWT_SECRET") || "default-secret",
+        secret: jwtSecret,
         expiresIn: 86400, // 24 hours in seconds
       }),
       this.jwtService.signAsync(payload, {
-        secret:
-          this.configService.get<string>("JWT_REFRESH_SECRET") ||
-          "default-refresh-secret",
+        secret: jwtRefreshSecret,
         expiresIn: 604800, // 7 days in seconds
       }),
     ]);
@@ -327,38 +344,69 @@ export class AuthService {
   }
 
   getCookieOptions(isRefreshToken = false) {
-    const isProduction =
-      this.configService.get<string>("NODE_ENV") === "production";
+    const nodeEnv = this.configService.get<string>("NODE_ENV", "development");
+    const isProduction = nodeEnv === "production";
     
-    // For cross-origin requests (different ports or domains), we need sameSite: "none" with secure: true
-    // This is required when frontend and backend are on different origins (e.g., port 3002 vs 5000)
+    // Get URLs for cross-origin detection
     const frontendUrl = this.configService.get<string>("FRONTEND_URL", "");
     const backendUrl = this.configService.get<string>("BACKEND_URL", "");
     
-    // Check if we're in a cross-origin setup (different URLs/ports)
-    // In production with different ports, we need sameSite: none and secure: true
-    let isCrossOrigin = false;
-    if (frontendUrl && backendUrl) {
-      // Extract the base (protocol + host) without port for comparison
-      const frontendBase = frontendUrl.split(",")[0]?.trim() || "";
-      const backendBase = backendUrl.split(",")[0]?.trim() || "";
-      isCrossOrigin = frontendBase !== backendBase;
+    // Check if we're using HTTPS (secure context)
+    // Also check for FORCE_HTTPS env variable for reverse proxy setups (nginx with SSL termination)
+    const forceHttps = this.configService.get<string>("FORCE_HTTPS", "false") === "true";
+    const isHttps = forceHttps || backendUrl.startsWith("https://") || frontendUrl.startsWith("https://");
+    
+    // Check if frontend and backend are on the same origin (same domain/subdomain)
+    // When using nginx proxy, both will be same-origin, enabling lax cookies
+    const isSameOrigin = this.configService.get<string>("SAME_ORIGIN_COOKIES", "true") === "true";
+    
+    // Cookie configuration for different deployment scenarios:
+    // 1. Same-origin (nginx proxy): sameSite: "lax" works perfectly on HTTP or HTTPS
+    // 2. Cross-origin with HTTPS: sameSite: "none" + secure: true required
+    // 3. Cross-origin with HTTP: Cookies won't work properly (browser limitation)
+    
+    // For VPS/PM2 deployment with nginx proxy (same-origin):
+    // - Use sameSite: "lax" which works on HTTP
+    // - Don't require secure flag unless HTTPS
+    
+    let sameSite: "lax" | "strict" | "none";
+    let secure: boolean;
+    
+    if (isSameOrigin) {
+      // Same-origin setup (nginx proxying /api to backend)
+      // This is the recommended VPS setup - works on HTTP or HTTPS
+      sameSite = "lax";
+      secure = isHttps;
+    } else if (isHttps) {
+      // Cross-origin with HTTPS - required for cross-site cookies
+      sameSite = "none";
+      secure = true;
+    } else {
+      // Cross-origin without HTTPS - this won't work well
+      // Modern browsers block cross-site cookies without secure flag
+      // Log a warning in production
+      if (isProduction) {
+        console.warn(
+          "[Auth] Cross-origin cookies on HTTP are not supported by modern browsers. " +
+          "Either use HTTPS or configure nginx to proxy API requests (same-origin)."
+        );
+      }
+      sameSite = "lax";
+      secure = false;
     }
     
-    // In production, always use sameSite: none for cross-origin cookie support
-    const needsCrossOriginCookies = isProduction || isCrossOrigin;
-
     return {
       httpOnly: true,
-      // secure must be true when sameSite is "none" 
-      secure: needsCrossOriginCookies ? true : false,
-      // Use 'none' for cross-origin requests (required for cookies to work across different ports/domains)
-      // Use 'lax' for same-origin in development
-      sameSite: needsCrossOriginCookies ? ("none" as const) : ("lax" as const),
+      secure,
+      sameSite,
       maxAge: isRefreshToken
         ? 7 * 24 * 60 * 60 * 1000 // 7 days
         : 24 * 60 * 60 * 1000, // 24 hours
       path: "/",
+      // Domain setting - only set if explicitly configured for subdomain cookies
+      ...(this.configService.get<string>("COOKIE_DOMAIN") && {
+        domain: this.configService.get<string>("COOKIE_DOMAIN"),
+      }),
     };
   }
 }

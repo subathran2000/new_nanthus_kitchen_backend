@@ -41,8 +41,16 @@ export class UsersService {
       return queryBuilder.orderBy("user.createdAt", "DESC").getMany();
     }
 
-    // Admin can only see visitors
+    // Admin can see visitors and managers
     if (currentUser.role === UserRole.ADMIN) {
+      return queryBuilder
+        .where("user.role IN (:...roles)", { roles: [UserRole.VISITOR, UserRole.MANAGER] })
+        .orderBy("user.createdAt", "DESC")
+        .getMany();
+    }
+
+    // Manager can only see visitors
+    if (currentUser.role === UserRole.MANAGER) {
       return queryBuilder
         .where("user.role = :role", { role: UserRole.VISITOR })
         .orderBy("user.createdAt", "DESC")
@@ -122,10 +130,19 @@ export class UsersService {
       return;
     }
 
-    // Admin can only delete visitors
+    // Admin can delete visitors and managers
     if (currentUser.role === UserRole.ADMIN) {
+      if (user.role !== UserRole.VISITOR && user.role !== UserRole.MANAGER) {
+        throw new ForbiddenException("Admins can only delete visitors and managers");
+      }
+      await this.userRepository.remove(user);
+      return;
+    }
+
+    // Manager can only delete visitors
+    if (currentUser.role === UserRole.MANAGER) {
       if (user.role !== UserRole.VISITOR) {
-        throw new ForbiddenException("Admins can only delete visitors");
+        throw new ForbiddenException("Managers can only delete visitors");
       }
       await this.userRepository.remove(user);
       return;
@@ -187,9 +204,15 @@ export class UsersService {
       throw new ForbiddenException("You cannot deactivate yourself");
     }
 
-    // Check permissions
-    if (currentUser.role === UserRole.ADMIN && user.role !== UserRole.VISITOR) {
-      throw new ForbiddenException("Admins can only deactivate visitors");
+    // Check permissions based on role
+    if (currentUser.role === UserRole.ADMIN) {
+      if (user.role !== UserRole.VISITOR && user.role !== UserRole.MANAGER) {
+        throw new ForbiddenException("Admins can only deactivate visitors and managers");
+      }
+    } else if (currentUser.role === UserRole.MANAGER) {
+      if (user.role !== UserRole.VISITOR) {
+        throw new ForbiddenException("Managers can only deactivate visitors");
+      }
     }
 
     user.isActive = false;
@@ -222,14 +245,37 @@ export class UsersService {
       return;
     }
 
-    // Admin can only update visitors
+    // Admin can update visitors and managers
     if (currentUser.role === UserRole.ADMIN) {
-      if (targetUser.role !== UserRole.VISITOR) {
-        throw new ForbiddenException("Admins can only update visitors");
+      if (
+        targetUser.role !== UserRole.VISITOR &&
+        targetUser.role !== UserRole.MANAGER
+      ) {
+        throw new ForbiddenException(
+          "Admins can only update visitors and managers",
+        );
       }
-      // Admin cannot promote visitors to admin
+      // Admin cannot promote users to admin or super_admin
+      if (
+        updateDto.role &&
+        updateDto.role !== UserRole.VISITOR &&
+        updateDto.role !== UserRole.MANAGER
+      ) {
+        throw new ForbiddenException(
+          "Admins cannot promote users to admin roles",
+        );
+      }
+      return;
+    }
+
+    // Manager can only update visitors
+    if (currentUser.role === UserRole.MANAGER) {
+      if (targetUser.role !== UserRole.VISITOR) {
+        throw new ForbiddenException("Managers can only update visitors");
+      }
+      // Manager cannot change roles
       if (updateDto.role && updateDto.role !== UserRole.VISITOR) {
-        throw new ForbiddenException("Admins cannot change user roles");
+        throw new ForbiddenException("Managers cannot change user roles");
       }
       return;
     }

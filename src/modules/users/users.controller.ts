@@ -32,7 +32,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: "Create a new user" })
   @ApiResponse({
     status: 201,
@@ -41,17 +41,26 @@ export class UsersController {
   })
   async create(
     @Body() createUserDto: CreateUserDto,
-    @CurrentUser() currentUser: User
+    @CurrentUser() currentUser: User,
   ): Promise<User> {
-    // Admin can only create visitors
+    // Role-based restrictions for user creation
     if (currentUser.role === UserRole.ADMIN) {
+      // Admin can create visitors and managers only
+      if (
+        createUserDto.role !== UserRole.VISITOR &&
+        createUserDto.role !== UserRole.MANAGER
+      ) {
+        createUserDto.role = UserRole.VISITOR;
+      }
+    } else if (currentUser.role === UserRole.MANAGER) {
+      // Manager can only create visitors
       createUserDto.role = UserRole.VISITOR;
     }
     return this.usersService.create(createUserDto);
   }
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: "Get all users" })
   @ApiResponse({
     status: 200,
@@ -71,9 +80,9 @@ export class UsersController {
   })
   async findOne(
     @Param("id", ParseUUIDPipe) id: string,
-    @CurrentUser() currentUser: User
+    @CurrentUser() currentUser: User,
   ): Promise<User> {
-    // Users can only view themselves unless they're admin/super_admin
+    // Users can only view themselves unless they're admin/super_admin/manager
     if (currentUser.role === UserRole.VISITOR && currentUser.id !== id) {
       return this.usersService.findOne(currentUser.id);
     }
@@ -90,24 +99,24 @@ export class UsersController {
   async update(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() updateUserDto: UpdateUserDto,
-    @CurrentUser() currentUser: User
+    @CurrentUser() currentUser: User,
   ): Promise<User> {
     return this.usersService.update(id, updateUserDto, currentUser);
   }
 
   @Delete(":id")
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: "Delete user" })
   @ApiResponse({ status: 200, description: "User deleted successfully" })
   async remove(
     @Param("id", ParseUUIDPipe) id: string,
-    @CurrentUser() currentUser: User
+    @CurrentUser() currentUser: User,
   ): Promise<void> {
     return this.usersService.remove(id, currentUser);
   }
 
   @Patch(":id/deactivate")
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: "Deactivate user" })
   @ApiResponse({
     status: 200,
@@ -116,7 +125,7 @@ export class UsersController {
   })
   async deactivate(
     @Param("id", ParseUUIDPipe) id: string,
-    @CurrentUser() currentUser: User
+    @CurrentUser() currentUser: User,
   ): Promise<User> {
     return this.usersService.deactivate(id, currentUser);
   }

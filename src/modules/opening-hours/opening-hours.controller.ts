@@ -40,7 +40,7 @@ export class OpeningHoursController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Create opening hours entry" })
   @ApiResponse({
@@ -97,7 +97,7 @@ export class OpeningHoursController {
 
   @Patch("bulk")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Bulk update opening hours" })
   @ApiResponse({
@@ -110,7 +110,7 @@ export class OpeningHoursController {
 
   @Patch(":id")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Update opening hours" })
   @ApiResponse({
@@ -127,7 +127,7 @@ export class OpeningHoursController {
 
   @Delete(":id")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete opening hours" })
@@ -142,7 +142,7 @@ export class OpeningHoursController {
 
   @Post("initialize/:location")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Initialize default hours for a location" })
   @ApiResponse({ status: 201, description: "Default hours initialized" })

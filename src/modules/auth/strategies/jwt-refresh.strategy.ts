@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable, UnauthorizedException, Logger } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { ConfigService } from "@nestjs/config";
@@ -10,18 +10,26 @@ export class JwtRefreshStrategy extends PassportStrategy(
   Strategy,
   "jwt-refresh"
 ) {
+  private readonly logger = new Logger(JwtRefreshStrategy.name);
+
   constructor(
     private readonly configService: ConfigService,
     private readonly usersService: UsersService
   ) {
-    const refreshSecret =
-      configService.get<string>("JWT_REFRESH_SECRET") ||
-      "default-refresh-secret";
+    const refreshSecret = configService.get<string>("JWT_REFRESH_SECRET");
+    if (!refreshSecret) {
+      throw new Error("JWT_REFRESH_SECRET environment variable is required");
+    }
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         // First try to extract from cookie
         (request: Request) => {
-          return request?.cookies?.refresh_token;
+          const token = request?.cookies?.refresh_token;
+          if (!token) {
+            const logger = new Logger("JwtRefreshStrategy");
+            logger.debug(`No refresh_token cookie found. Cookies: ${JSON.stringify(Object.keys(request?.cookies || {}))}`);
+          }
+          return token;
         },
         // Then try from body
         (request: Request) => {
@@ -35,20 +43,25 @@ export class JwtRefreshStrategy extends PassportStrategy(
   }
 
   async validate(request: Request, payload: { sub: string; email: string }) {
+    this.logger.debug(`Validating refresh token for user: ${payload.email}`);
+    
     const refreshToken =
       request?.cookies?.refresh_token || request?.body?.refreshToken;
 
     if (!refreshToken) {
+      this.logger.warn("Refresh token not found in cookies or body");
       throw new UnauthorizedException("Refresh token not found");
     }
 
     const user = await this.usersService.findOne(payload.sub);
 
     if (!user || !user.isActive) {
+      this.logger.warn(`User not found or inactive: ${payload.sub}`);
       throw new UnauthorizedException("User not found or inactive");
     }
 
     if (user.refreshToken !== refreshToken) {
+      this.logger.warn("Refresh token mismatch");
       throw new UnauthorizedException("Invalid refresh token");
     }
 

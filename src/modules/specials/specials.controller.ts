@@ -39,7 +39,7 @@ export class SpecialsController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Create a new special" })
   @ApiResponse({ status: 201, description: "Special created successfully" })
@@ -90,7 +90,7 @@ export class SpecialsController {
 
   @Patch(":id")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Update a special" })
   @ApiResponse({ status: 200, description: "Special updated successfully" })
@@ -104,7 +104,7 @@ export class SpecialsController {
 
   @Delete(":id")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete a special" })
@@ -116,7 +116,7 @@ export class SpecialsController {
 
   @Patch(":id/toggle-active")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Toggle special active status" })
   @ApiResponse({ status: 200, description: "Special status toggled" })
@@ -127,7 +127,7 @@ export class SpecialsController {
 
   @Post("reorder")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Reorder specials" })

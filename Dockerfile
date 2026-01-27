@@ -21,6 +21,7 @@ RUN pnpm build
 FROM base AS runner
 
 ENV NODE_ENV=production
+ENV PORT=5000
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs
@@ -39,10 +40,10 @@ RUN chown -R nestjs:nodejs uploads
 
 USER nestjs
 
-EXPOSE 3000
+EXPOSE 5000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health/live', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+  CMD node -e "require('http').get('http://localhost:5000/api/health/live', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
 CMD ["node", "dist/main.js"]

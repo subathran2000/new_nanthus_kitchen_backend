@@ -4,12 +4,14 @@ import {
   Body,
   UseGuards,
   Res,
+  Req,
   HttpCode,
   HttpStatus,
   Get,
   Patch,
+  Logger,
 } from "@nestjs/common";
-import { Response } from "express";
+import { Response, Request } from "express";
 import {
   ApiTags,
   ApiOperation,
@@ -42,6 +44,8 @@ import { UserRole } from "../../common/enums";
 @ApiTags("Authentication")
 @Controller("auth")
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private readonly authService: AuthService) {}
 
   @Post("login")
@@ -58,23 +62,40 @@ export class AuthController {
   async login(
     @Body() loginDto: LoginDto,
     @CurrentUser() user: User,
+    @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
     const result = await this.authService.login(user);
 
+    // Get cookie options and log them for debugging
+    const cookieOptions = this.authService.getCookieOptions();
+    const refreshCookieOptions = this.authService.getCookieOptions(true);
+
+    this.logger.log(`Login for user: ${user.email}`);
+    this.logger.log(`Request origin: ${request.headers.origin}`);
+    this.logger.log(`Cookie options: ${JSON.stringify(cookieOptions)}`);
+
     // Set cookies
-    response.cookie(
-      "access_token",
-      result.accessToken,
-      this.authService.getCookieOptions(),
-    );
-    response.cookie(
-      "refresh_token",
-      result.refreshToken,
-      this.authService.getCookieOptions(true),
-    );
+    response.cookie("access_token", result.accessToken, cookieOptions);
+    response.cookie("refresh_token", result.refreshToken, refreshCookieOptions);
 
     return result;
+  }
+
+  // Debug endpoint to check cookie configuration (remove in production)
+  @Get("debug/cookie-config")
+  @Public()
+  @ApiOperation({ summary: "Debug cookie configuration" })
+  async debugCookieConfig(@Req() request: Request) {
+    const cookieOptions = this.authService.getCookieOptions();
+    return {
+      requestOrigin: request.headers.origin,
+      requestHost: request.headers.host,
+      cookieOptions,
+      receivedCookies: Object.keys(request.cookies || {}),
+      hasAccessToken: !!request.cookies?.access_token,
+      hasRefreshToken: !!request.cookies?.refresh_token,
+    };
   }
 
   @Post("logout")
@@ -98,7 +119,7 @@ export class AuthController {
 
   @Post("register")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Register new user (admin only)" })
   @ApiResponse({ status: 201, description: "User registered successfully" })

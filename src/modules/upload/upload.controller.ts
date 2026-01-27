@@ -42,7 +42,7 @@ export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post("single")
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @UseInterceptors(FileInterceptor("file"))
   @ApiConsumes("multipart/form-data")
   @ApiOperation({ summary: "Upload a single file" })
@@ -69,13 +69,13 @@ export class UploadController {
   @ApiResponse({ status: 400, description: "Invalid file or parameters" })
   uploadFile(
     @UploadedFile() file: Express.Multer.File,
-    @Body() dto: UploadFileDto
+    @Body() dto: UploadFileDto,
   ) {
     return this.uploadService.uploadFile(file, dto.folder, dto.customFilename);
   }
 
   @Post("multiple")
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @UseInterceptors(FilesInterceptor("files", 10))
   @ApiConsumes("multipart/form-data")
   @ApiOperation({ summary: "Upload multiple files (max 10)" })
@@ -102,13 +102,13 @@ export class UploadController {
   @ApiResponse({ status: 400, description: "Invalid files or parameters" })
   uploadMultiple(
     @UploadedFiles() files: Express.Multer.File[],
-    @Body("folder") folder: UploadFolder
+    @Body("folder") folder: UploadFolder,
   ) {
     return this.uploadService.uploadMultiple(files, folder);
   }
 
   @Delete("single")
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete a single file" })
   @ApiResponse({ status: 204, description: "File deleted successfully" })
@@ -118,7 +118,7 @@ export class UploadController {
   }
 
   @Delete("multiple")
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: "Delete multiple files" })
   @ApiResponse({ status: 200, description: "Deletion results" })
   deleteMultiple(@Body() dto: DeleteMultipleFilesDto) {
@@ -126,18 +126,18 @@ export class UploadController {
   }
 
   @Get("info/:folder/:filename")
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: "Get file information" })
   @ApiResponse({ status: 200, description: "File information" })
   getFileInfo(
     @Param("folder") folder: UploadFolder,
-    @Param("filename") filename: string
+    @Param("filename") filename: string,
   ) {
     return this.uploadService.getFileInfo(`${folder}/${filename}`);
   }
 
   @Get("list/:folder")
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: "List files in a folder" })
   @ApiResponse({ status: 200, description: "List of files" })
   listFiles(@Param("folder") folder: UploadFolder) {

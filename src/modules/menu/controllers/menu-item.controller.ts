@@ -37,7 +37,7 @@ export class MenuItemController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Create a new menu item" })
   @ApiResponse({ status: 201, description: "Menu item created" })
@@ -72,7 +72,7 @@ export class MenuItemController {
 
   @Patch("reorder")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Reorder menu items" })
   @ApiResponse({ status: 200, description: "Menu items reordered" })
@@ -83,7 +83,7 @@ export class MenuItemController {
 
   @Patch(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Update a menu item" })
   @ApiResponse({ status: 200, description: "Menu item updated" })
@@ -96,7 +96,7 @@ export class MenuItemController {
 
   @Delete(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Delete a menu item" })
   @ApiResponse({ status: 200, description: "Menu item deleted" })
@@ -107,7 +107,7 @@ export class MenuItemController {
 
   @Patch(":id/availability")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Toggle menu item availability" })
   @ApiResponse({ status: 200, description: "Availability toggled" })
@@ -120,7 +120,7 @@ export class MenuItemController {
 
   @Post(":id/duplicate")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Duplicate a menu item" })
   @ApiResponse({ status: 201, description: "Menu item duplicated" })
@@ -130,7 +130,7 @@ export class MenuItemController {
 
   @Post("bulk-availability")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Bulk toggle availability for menu items" })
   @ApiResponse({ status: 200, description: "Bulk availability updated" })

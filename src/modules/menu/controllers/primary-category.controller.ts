@@ -31,12 +31,12 @@ import { UserRole } from "../../../common/enums";
 @Controller("menu/primary-categories")
 export class PrimaryCategoryController {
   constructor(
-    private readonly primaryCategoryService: PrimaryCategoryService
+    private readonly primaryCategoryService: PrimaryCategoryService,
   ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Create a new primary category" })
   @ApiResponse({ status: 201, description: "Primary category created" })
@@ -62,7 +62,7 @@ export class PrimaryCategoryController {
 
   @Patch("reorder")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Reorder primary categories" })
   @ApiResponse({ status: 200, description: "Primary categories reordered" })
@@ -73,20 +73,20 @@ export class PrimaryCategoryController {
 
   @Patch(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Update a primary category" })
   @ApiResponse({ status: 200, description: "Primary category updated" })
   async update(
     @Param("id", ParseUUIDPipe) id: string,
-    @Body() updateDto: UpdatePrimaryCategoryDto
+    @Body() updateDto: UpdatePrimaryCategoryDto,
   ) {
     return this.primaryCategoryService.update(id, updateDto);
   }
 
   @Delete(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Delete a primary category" })
   @ApiResponse({ status: 200, description: "Primary category deleted" })
@@ -97,7 +97,7 @@ export class PrimaryCategoryController {
 
   @Patch(":id/toggle-active")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Toggle primary category active status" })
   @ApiResponse({ status: 200, description: "Status toggled" })

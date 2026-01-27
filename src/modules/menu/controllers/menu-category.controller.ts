@@ -36,7 +36,7 @@ export class MenuCategoryController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Create a new menu category" })
   @ApiResponse({ status: 201, description: "Menu category created" })
@@ -71,7 +71,7 @@ export class MenuCategoryController {
 
   @Patch("reorder")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Reorder menu categories" })
   @ApiResponse({ status: 200, description: "Menu categories reordered" })
@@ -82,7 +82,7 @@ export class MenuCategoryController {
 
   @Patch(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Update a menu category" })
   @ApiResponse({ status: 200, description: "Menu category updated" })
@@ -95,7 +95,7 @@ export class MenuCategoryController {
 
   @Delete(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Delete a menu category" })
   @ApiResponse({ status: 200, description: "Menu category deleted" })
@@ -106,7 +106,7 @@ export class MenuCategoryController {
 
   @Patch(":id/toggle-active")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Toggle menu category active status" })
   @ApiResponse({ status: 200, description: "Status toggled" })

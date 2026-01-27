@@ -30,12 +30,12 @@ import { UserRole } from "../../../common/enums";
 @Controller("measurements")
 export class MeasurementTypeController {
   constructor(
-    private readonly measurementTypeService: MeasurementTypeService
+    private readonly measurementTypeService: MeasurementTypeService,
   ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Create a new measurement type" })
   @ApiResponse({ status: 201, description: "Measurement type created" })
@@ -61,20 +61,20 @@ export class MeasurementTypeController {
 
   @Patch(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Update a measurement type" })
   @ApiResponse({ status: 200, description: "Measurement type updated" })
   async update(
     @Param("id", ParseUUIDPipe) id: string,
-    @Body() updateDto: UpdateMeasurementTypeDto
+    @Body() updateDto: UpdateMeasurementTypeDto,
   ) {
     return this.measurementTypeService.update(id, updateDto);
   }
 
   @Delete(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Delete a measurement type" })
   @ApiResponse({ status: 200, description: "Measurement type deleted" })

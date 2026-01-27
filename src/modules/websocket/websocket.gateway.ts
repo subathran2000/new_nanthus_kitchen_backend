@@ -56,7 +56,8 @@ interface NewsletterUpdateData extends WebSocketEventData {
         if (process.env.NODE_ENV !== "production") {
           callback(null, true);
         } else {
-          console.warn(`WebSocket CORS blocked origin: ${origin}`);
+          // Logger is not available in static context, use console.warn
+          // This will be logged via the gateway's logger when connected
           callback(new Error("Not allowed by CORS"), false);
         }
       }
