@@ -12,6 +12,7 @@ describe("AppController (e2e)", () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix("api");
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -29,7 +30,7 @@ describe("AppController (e2e)", () => {
   describe("Health Check", () => {
     it("/health (GET)", () => {
       return request(app.getHttpServer())
-        .get("/health")
+        .get("/api/health")
         .expect(200)
         .expect((res) => {
           expect(res.body).toHaveProperty("status");
@@ -39,7 +40,7 @@ describe("AppController (e2e)", () => {
 
     it("/health/live (GET)", () => {
       return request(app.getHttpServer())
-        .get("/health/live")
+        .get("/api/health/live")
         .expect(200)
         .expect((res) => {
           expect(res.body).toHaveProperty("status", "ok");
@@ -50,14 +51,14 @@ describe("AppController (e2e)", () => {
   describe("Authentication", () => {
     it("/auth/login (POST) - should reject invalid credentials", () => {
       return request(app.getHttpServer())
-        .post("/auth/login")
+        .post("/api/auth/login")
         .send({ email: "invalid@test.com", password: "wrongpassword" })
         .expect(401);
     });
 
     it("/auth/login (POST) - should reject missing credentials", () => {
       return request(app.getHttpServer())
-        .post("/auth/login")
+        .post("/api/auth/login")
         .send({})
         .expect(401);
     });
@@ -65,15 +66,15 @@ describe("AppController (e2e)", () => {
 
   describe("Protected Routes", () => {
     it("/users (GET) - should reject unauthenticated requests", () => {
-      return request(app.getHttpServer()).get("/users").expect(401);
+      return request(app.getHttpServer()).get("/api/users").expect(401);
     });
 
     it("/menu/items (GET) - should reject unauthenticated requests", () => {
-      return request(app.getHttpServer()).get("/menu/items").expect(401);
+      return request(app.getHttpServer()).get("/api/menu/items").expect(401);
     });
 
     it("/events (GET) - should reject unauthenticated requests", () => {
-      return request(app.getHttpServer()).get("/events").expect(401);
+      return request(app.getHttpServer()).get("/api/events").expect(401);
     });
   });
 });

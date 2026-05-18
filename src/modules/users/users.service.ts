@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import * as bcrypt from "bcrypt";
 import { User } from "./entities/user.entity";
 import { CreateUserDto, UpdateUserDto } from "./dto/user.dto";
 import { UserRole } from "../../common/enums";
@@ -15,17 +16,21 @@ import { v4 as uuidv4 } from "uuid";
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>
+    private readonly userRepository: Repository<User>,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const existingUser = await this.findByEmail(createUserDto.email);
+    // Normalize email to lowercase
+    const normalizedEmail = createUserDto.email.toLowerCase().trim();
+
+    const existingUser = await this.findByEmail(normalizedEmail);
     if (existingUser) {
       throw new ConflictException("User with this email already exists");
     }
 
     const user = this.userRepository.create({
       ...createUserDto,
+      email: normalizedEmail, // Store normalized email
       emailVerificationToken: uuidv4(),
       emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
     });
@@ -44,7 +49,9 @@ export class UsersService {
     // Admin can see visitors and managers
     if (currentUser.role === UserRole.ADMIN) {
       return queryBuilder
-        .where("user.role IN (:...roles)", { roles: [UserRole.VISITOR, UserRole.MANAGER] })
+        .where("user.role IN (:...roles)", {
+          roles: [UserRole.VISITOR, UserRole.MANAGER],
+        })
         .orderBy("user.createdAt", "DESC")
         .getMany();
     }
@@ -72,7 +79,9 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { email } });
+    // Normalize email to lowercase for consistent lookup
+    const normalizedEmail = email.toLowerCase().trim();
+    return this.userRepository.findOne({ where: { email: normalizedEmail } });
   }
 
   async findByEmailVerificationToken(token: string): Promise<User | null> {
@@ -94,7 +103,7 @@ export class UsersService {
   async update(
     id: string,
     updateUserDto: UpdateUserDto,
-    currentUser: User
+    currentUser: User,
   ): Promise<User> {
     const user = await this.findOne(id);
 
@@ -133,7 +142,9 @@ export class UsersService {
     // Admin can delete visitors and managers
     if (currentUser.role === UserRole.ADMIN) {
       if (user.role !== UserRole.VISITOR && user.role !== UserRole.MANAGER) {
-        throw new ForbiddenException("Admins can only delete visitors and managers");
+        throw new ForbiddenException(
+          "Admins can only delete visitors and managers",
+        );
       }
       await this.userRepository.remove(user);
       return;
@@ -153,9 +164,27 @@ export class UsersService {
 
   async updateRefreshToken(
     userId: string,
-    refreshToken: string | null
+    refreshToken: string | null,
   ): Promise<void> {
-    await this.userRepository.update(userId, { refreshToken });
+    // Hash the refresh token before storing for security
+    const hashedToken = refreshToken
+      ? await bcrypt.hash(refreshToken, 10)
+      : null;
+    await this.userRepository.update(userId, { refreshToken: hashedToken });
+  }
+
+  /**
+   * Validate a refresh token against the stored hash
+   */
+  async validateRefreshToken(
+    userId: string,
+    refreshToken: string,
+  ): Promise<boolean> {
+    const user = await this.findOne(userId);
+    if (!user.refreshToken) {
+      return false;
+    }
+    return bcrypt.compare(refreshToken, user.refreshToken);
   }
 
   async updateLastLogin(userId: string): Promise<void> {
@@ -207,7 +236,9 @@ export class UsersService {
     // Check permissions based on role
     if (currentUser.role === UserRole.ADMIN) {
       if (user.role !== UserRole.VISITOR && user.role !== UserRole.MANAGER) {
-        throw new ForbiddenException("Admins can only deactivate visitors and managers");
+        throw new ForbiddenException(
+          "Admins can only deactivate visitors and managers",
+        );
       }
     } else if (currentUser.role === UserRole.MANAGER) {
       if (user.role !== UserRole.VISITOR) {
@@ -228,7 +259,7 @@ export class UsersService {
   private checkUpdatePermissions(
     currentUser: User,
     targetUser: User,
-    updateDto: UpdateUserDto
+    updateDto: UpdateUserDto,
   ): void {
     // Super admin can update anyone
     if (currentUser.role === UserRole.SUPER_ADMIN) {
@@ -239,7 +270,7 @@ export class UsersService {
     if (currentUser.id === targetUser.id) {
       if (updateDto.role || updateDto.isActive !== undefined) {
         throw new ForbiddenException(
-          "You cannot change your own role or active status"
+          "You cannot change your own role or active status",
         );
       }
       return;
@@ -281,7 +312,7 @@ export class UsersService {
     }
 
     throw new ForbiddenException(
-      "You do not have permission to update this user"
+      "You do not have permission to update this user",
     );
   }
 }

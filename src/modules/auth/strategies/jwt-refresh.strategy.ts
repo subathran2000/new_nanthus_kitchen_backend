@@ -60,7 +60,9 @@ export class JwtRefreshStrategy extends PassportStrategy(
       throw new UnauthorizedException("User not found or inactive");
     }
 
-    if (user.refreshToken !== refreshToken) {
+    // Validate refresh token using secure hash comparison
+    const isValidToken = await this.usersService.validateRefreshToken(payload.sub, refreshToken);
+    if (!isValidToken) {
       this.logger.warn("Refresh token mismatch");
       throw new UnauthorizedException("Invalid refresh token");
     }

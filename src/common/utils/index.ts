@@ -5,3 +5,4 @@
  */
 
 export * from "./timezone.util";
+export * from "./sanitize";

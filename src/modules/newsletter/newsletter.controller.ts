@@ -203,7 +203,8 @@ export class NewsletterController {
   @ApiResponse({ status: 404, description: "Campaign not found" })
   @ApiResponse({
     status: 400,
-    description: "Cannot delete sent/sending campaign",
+    description:
+      "Cannot delete campaign - either already sent to subscribers or currently being sent",
   })
   deleteCampaign(@Param("id", ParseUUIDPipe) id: string) {
     return this.newsletterService.deleteCampaign(id);
@@ -224,10 +225,13 @@ export class NewsletterController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Send campaign to subscribers" })
-  @ApiResponse({ status: 200, description: "Campaign sent" })
+  @ApiOperation({ summary: "Send or resend campaign to subscribers" })
+  @ApiResponse({ status: 200, description: "Campaign sent successfully" })
   @ApiResponse({ status: 404, description: "Campaign not found" })
-  @ApiResponse({ status: 400, description: "Campaign already sent or sending" })
+  @ApiResponse({
+    status: 400,
+    description: "Campaign already sent, currently sending, or invalid status",
+  })
   sendCampaign(@Param("id", ParseUUIDPipe) id: string) {
     return this.newsletterService.sendCampaign(id);
   }

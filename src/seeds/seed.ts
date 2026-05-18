@@ -20,7 +20,7 @@ const AppDataSource = new DataSource({
   username: process.env.DATABASE_USER || "postgres",
   password: process.env.DATABASE_PASSWORD,
   database: process.env.DATABASE_NAME,
-  synchronize: true, // For seeding, we use synchronize
+  synchronize: false, // Never use synchronize — use migrations instead
   logging: true,
   entities: [join(__dirname, "../**/*.entity{.ts,.js}")],
 });
@@ -69,7 +69,7 @@ async function seed() {
         true,
       ],
     );
-    console.log(`✅ Super admin created with email: ${adminEmail}`);
+    console.log(`✅ Super admin created successfully`);
     await queryRunner.commitTransaction();
   } catch (error) {
     await queryRunner.rollbackTransaction();

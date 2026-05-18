@@ -8,6 +8,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { UploadFolder, FileResponseDto } from "./dto/upload.dto";
+import { sanitizeFilename } from "../../common/utils/sanitize";
 
 @Injectable()
 export class UploadService {
@@ -28,7 +29,6 @@ export class UploadService {
       "image/png",
       "image/gif",
       "image/webp",
-      "image/svg+xml",
     ];
 
     // Ensure upload directories exist
@@ -53,8 +53,11 @@ export class UploadService {
     this.validateFile(file);
 
     const ext = path.extname(file.originalname);
-    const filename = customFilename
-      ? `${customFilename}${ext}`
+    
+    // Sanitize custom filename to prevent path traversal attacks
+    const safeCustomFilename = customFilename ? sanitizeFilename(customFilename) : null;
+    const filename = safeCustomFilename
+      ? `${safeCustomFilename}${ext}`
       : `${uuidv4()}${ext}`;
 
     const folderPath = path.join(this.uploadPath, folder);
@@ -139,6 +142,14 @@ export class UploadService {
   }> {
     const fullPath = path.join(this.uploadPath, filePath);
 
+    // Security check: ensure path is within upload directory
+    const normalizedFullPath = path.normalize(fullPath);
+    const normalizedUploadPath = path.normalize(this.uploadPath);
+
+    if (!normalizedFullPath.startsWith(normalizedUploadPath)) {
+      throw new BadRequestException("Invalid file path");
+    }
+
     if (!fs.existsSync(fullPath)) {
       return { exists: false };
     }
@@ -154,7 +165,20 @@ export class UploadService {
   }
 
   async listFiles(folder: UploadFolder): Promise<string[]> {
+    // Validate folder is a known enum value to prevent path traversal
+    if (!Object.values(UploadFolder).includes(folder)) {
+      throw new BadRequestException("Invalid folder");
+    }
+
     const folderPath = path.join(this.uploadPath, folder);
+
+    // Security check: ensure resolved path is within uploads directory
+    const normalizedFolderPath = path.normalize(folderPath);
+    const normalizedUploadPath = path.normalize(this.uploadPath);
+
+    if (!normalizedFolderPath.startsWith(normalizedUploadPath)) {
+      throw new BadRequestException("Invalid folder path");
+    }
 
     if (!fs.existsSync(folderPath)) {
       return [];

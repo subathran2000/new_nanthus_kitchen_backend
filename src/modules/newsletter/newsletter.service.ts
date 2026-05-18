@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { ConfigService } from "@nestjs/config";
 import { Repository, Like, ILike } from "typeorm";
 import { v4 as uuidv4 } from "uuid";
 import { NewsletterSubscriber } from "./entities/newsletter-subscriber.entity";
@@ -23,16 +24,25 @@ import {
   AdminCreateSubscriberDto,
 } from "./dto/newsletter.dto";
 import { EmailService } from "../email/email.service";
+import { sanitizeHtml, sanitizeString } from "../../common/utils/sanitize";
 
 @Injectable()
 export class NewsletterService {
+  private readonly frontendUrl: string;
+  private readonly logoUrl: string;
+
   constructor(
     @InjectRepository(NewsletterSubscriber)
     private readonly subscriberRepository: Repository<NewsletterSubscriber>,
     @InjectRepository(NewsletterCampaign)
     private readonly campaignRepository: Repository<NewsletterCampaign>,
     private readonly emailService: EmailService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.frontendUrl = this.configService.get<string>("FRONTEND_URL", "http://localhost:5173");
+    this.logoUrl = this.configService.get<string>("LOGO_URL") ||
+      `${this.frontendUrl}/new_nanthus_kitchen_logo.png`;
+  }
 
   // ==================== Subscriber Methods ====================
 
@@ -260,10 +270,8 @@ export class NewsletterService {
   private async sendConfirmationEmail(
     subscriber: NewsletterSubscriber,
   ): Promise<void> {
-    const unsubscribeUrl = `${process.env.FRONTEND_URL}/newsletter/unsubscribe?email=${encodeURIComponent(subscriber.email)}&token=${subscriber.unsubscribeToken}`;
-    const logoUrl =
-      process.env.LOGO_URL ||
-      `${process.env.FRONTEND_URL}/new_nanthus_kitchen_logo.png`;
+    const unsubscribeUrl = `${this.frontendUrl}/newsletter/unsubscribe?email=${encodeURIComponent(subscriber.email)}&token=${subscriber.unsubscribeToken}`;
+    const logoUrl = this.logoUrl;
 
     await this.emailService.sendMail({
       to: subscriber.email,
@@ -311,8 +319,14 @@ export class NewsletterService {
     createDto: CreateCampaignDto,
     userId: string,
   ): Promise<NewsletterCampaign> {
+    // Sanitize HTML content to prevent XSS
+    const sanitizedContent = sanitizeHtml(createDto.content);
+    const sanitizedSubject = sanitizeString(createDto.subject);
+
     const campaign = this.campaignRepository.create({
       ...createDto,
+      subject: sanitizedSubject,
+      content: sanitizedContent,
       createdById: userId,
       scheduledAt: createDto.scheduledAt
         ? new Date(createDto.scheduledAt)
@@ -390,12 +404,17 @@ export class NewsletterService {
       throw new BadRequestException("Cannot update a sent campaign");
     }
 
-    Object.assign(campaign, {
+    // Sanitize content if being updated
+    const sanitizedData = {
       ...updateDto,
+      ...(updateDto.content && { content: sanitizeHtml(updateDto.content) }),
+      ...(updateDto.subject && { subject: sanitizeString(updateDto.subject) }),
       scheduledAt: updateDto.scheduledAt
         ? new Date(updateDto.scheduledAt)
         : campaign.scheduledAt,
-    });
+    };
+
+    Object.assign(campaign, sanitizedData);
 
     return this.campaignRepository.save(campaign);
   }
@@ -403,11 +422,18 @@ export class NewsletterService {
   async deleteCampaign(id: string): Promise<void> {
     const campaign = await this.findCampaignById(id);
 
-    if (
-      campaign.status === NewsletterStatus.SENT ||
-      campaign.status === NewsletterStatus.SENDING
-    ) {
-      throw new BadRequestException("Cannot delete a sent or sending campaign");
+    if (campaign.status === NewsletterStatus.SENT) {
+      throw new BadRequestException(
+        "Cannot delete a campaign that has already been sent to subscribers. " +
+          "Sent campaigns are preserved for record-keeping purposes.",
+      );
+    }
+
+    if (campaign.status === NewsletterStatus.SENDING) {
+      throw new BadRequestException(
+        "Cannot delete a campaign that is currently being sent. " +
+          "Please wait for the sending process to complete or contact support if it's stuck.",
+      );
     }
 
     await this.campaignRepository.remove(campaign);
@@ -434,6 +460,14 @@ export class NewsletterService {
       throw new BadRequestException("Campaign is currently being sent");
     }
 
+    // Allow resending failed campaigns by resetting counters
+    const isResend = campaign.status === NewsletterStatus.FAILED;
+    if (isResend) {
+      campaign.successfulSends = 0;
+      campaign.failedSends = 0;
+      campaign.sentAt = null;
+    }
+
     // Get active subscribers based on target location
     const subscriberQuery = this.subscriberRepository
       .createQueryBuilder("subscriber")
@@ -457,20 +491,27 @@ export class NewsletterService {
     let failCount = 0;
 
     for (const subscriber of subscribers) {
-      try {
-        await this.emailService.sendMail({
-          to: subscriber.email,
-          subject: campaign.subject,
-          html: this.addUnsubscribeLink(campaign.content, subscriber),
-        });
+      const emailSent = await this.emailService.sendMail({
+        to: subscriber.email,
+        subject: campaign.subject,
+        html: this.addUnsubscribeLink(campaign.content, subscriber),
+      });
+
+      if (emailSent) {
         successCount++;
-      } catch (error) {
+      } else {
         failCount++;
       }
     }
 
-    campaign.status = NewsletterStatus.SENT;
-    campaign.sentAt = new Date();
+    // Set status based on send results
+    if (successCount > 0) {
+      campaign.status = NewsletterStatus.SENT;
+      campaign.sentAt = new Date();
+    } else {
+      campaign.status = NewsletterStatus.FAILED;
+    }
+
     campaign.successfulSends = successCount;
     campaign.failedSends = failCount;
 
@@ -481,10 +522,8 @@ export class NewsletterService {
     content: string,
     subscriber: NewsletterSubscriber,
   ): string {
-    const unsubscribeUrl = `${process.env.FRONTEND_URL}/newsletter/unsubscribe?email=${encodeURIComponent(subscriber.email)}&token=${subscriber.unsubscribeToken}`;
-    const logoUrl =
-      process.env.LOGO_URL ||
-      `${process.env.FRONTEND_URL}/new_nanthus_kitchen_logo.png`;
+    const unsubscribeUrl = `${this.frontendUrl}/newsletter/unsubscribe?email=${encodeURIComponent(subscriber.email)}&token=${subscriber.unsubscribeToken}`;
+    const logoUrl = this.logoUrl;
 
     // Add logo header and replace placeholder
     const contentWithLogo = content.replace("{{LOGO_URL}}", logoUrl);

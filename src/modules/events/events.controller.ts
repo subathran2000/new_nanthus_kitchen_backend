@@ -9,6 +9,7 @@ import {
   UseGuards,
   ParseUUIDPipe,
   Query,
+  BadRequestException,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -74,7 +75,14 @@ export class EventsController {
     @Query("start") start: string,
     @Query("end") end: string,
   ) {
-    return this.eventsService.findByDateRange(new Date(start), new Date(end));
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new BadRequestException("Invalid date format for start or end parameter");
+    }
+
+    return this.eventsService.findByDateRange(startDate, endDate);
   }
 
   @Get(":id")

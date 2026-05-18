@@ -24,7 +24,11 @@ export const databaseConfig = (
         : ["error", "warn"], // Log errors in production
     ssl:
       configService.get<string>("NODE_ENV") === "production"
-        ? { rejectUnauthorized: false }
+        ? {
+            rejectUnauthorized:
+              configService.get<string>("DATABASE_SSL_REJECT_UNAUTHORIZED") !== "false",
+            ca: configService.get<string>("DATABASE_SSL_CA") || undefined,
+          }
         : false,
     // Connection pool settings
     extra: {

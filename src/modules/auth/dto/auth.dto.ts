@@ -116,16 +116,24 @@ export class UpdateProfileDto {
   @ApiProperty({ example: "John", required: false })
   @IsString()
   @IsNotEmpty()
+  @IsOptional()
   firstName?: string;
 
   @ApiProperty({ example: "Doe", required: false })
   @IsString()
   @IsNotEmpty()
+  @IsOptional()
   lastName?: string;
 
   @ApiProperty({ example: "john.doe@example.com", required: false })
   @IsEmail()
+  @IsOptional()
   email?: string;
+
+  @ApiProperty({ example: "+1234567890", required: false })
+  @IsString()
+  @IsOptional()
+  phone?: string;
 }
 
 export class RefreshTokenDto {

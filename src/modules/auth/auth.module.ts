@@ -18,13 +18,19 @@ import { LocalStrategy } from "./strategies/local.strategy";
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (
-        configService: ConfigService
-      ): Promise<JwtModuleOptions> => ({
-        secret: configService.get<string>("JWT_SECRET") || "default-secret",
-        signOptions: {
-          expiresIn: 86400, // 24 hours in seconds
-        },
-      }),
+        configService: ConfigService,
+      ): Promise<JwtModuleOptions> => {
+        const secret = configService.get<string>("JWT_SECRET");
+        if (!secret) {
+          throw new Error("JWT_SECRET environment variable is required");
+        }
+        return {
+          secret,
+          signOptions: {
+            expiresIn: 86400, // 24 hours in seconds
+          },
+        };
+      },
       inject: [ConfigService],
     }),
   ],

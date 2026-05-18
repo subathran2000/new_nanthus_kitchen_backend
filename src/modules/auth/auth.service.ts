@@ -32,7 +32,9 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, password: string): Promise<User | null> {
-    const user = await this.usersService.findByEmail(email);
+    // Normalize email to lowercase for consistent lookup
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await this.usersService.findByEmail(normalizedEmail);
 
     if (!user) {
       return null;
@@ -170,7 +172,9 @@ export class AuthService {
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
-    const user = await this.usersService.findByEmail(forgotPasswordDto.email);
+    // Normalize email for lookup
+    const normalizedEmail = forgotPasswordDto.email.toLowerCase().trim();
+    const user = await this.usersService.findByEmail(normalizedEmail);
 
     if (!user) {
       // Don't reveal whether email exists

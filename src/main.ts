@@ -25,10 +25,25 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   // Validate required environment variables
-  const requiredEnvVars = ["JWT_SECRET", "DATABASE_PASSWORD"];
+  const requiredEnvVars = [
+    "JWT_SECRET",
+    "JWT_REFRESH_SECRET",
+    "DATABASE_PASSWORD",
+  ];
   for (const envVar of requiredEnvVars) {
-    if (!configService.get<string>(envVar)) {
+    const value = configService.get<string>(envVar);
+    if (!value) {
       logger.error(`Missing required environment variable: ${envVar}`);
+      process.exit(1);
+    }
+    // Validate JWT secrets are strong enough (at least 32 characters)
+    if (
+      (envVar === "JWT_SECRET" || envVar === "JWT_REFRESH_SECRET") &&
+      value.length < 32
+    ) {
+      logger.error(
+        `${envVar} must be at least 32 characters long for security`,
+      );
       process.exit(1);
     }
   }

@@ -118,6 +118,15 @@ export class AdminWebSocketGateway
     this.server.emit(event, data);
   }
 
+  // Emit events only to authenticated clients
+  emitToAuthenticated(event: string, data: WebSocketEventData) {
+    for (const [clientId, clientInfo] of this.connectedClients) {
+      if (clientInfo.userId) {
+        this.server.to(clientId).emit(event, data);
+      }
+    }
+  }
+
   // Menu events
   emitMenuUpdate(
     type: "category" | "item" | "primaryCategory",
@@ -133,7 +142,7 @@ export class AdminWebSocketGateway
     this.emitToAll("menu:update", payload);
   }
 
-  // Newsletter events
+  // Newsletter events — only to authenticated admin clients
   emitNewsletterUpdate(
     type: "subscriber" | "campaign",
     action: "created" | "updated" | "deleted" | "sent",
@@ -145,7 +154,7 @@ export class AdminWebSocketGateway
       data,
       timestamp: new Date(),
     };
-    this.emitToAll("newsletter:update", payload);
+    this.emitToAuthenticated("newsletter:update", payload);
   }
 
   // Events module events
@@ -169,12 +178,12 @@ export class AdminWebSocketGateway
     this.emitToAll("openingHours:update", { data, timestamp: new Date() });
   }
 
-  // User events
+  // User events — only to authenticated admin clients
   emitUserUpdate(
     action: "created" | "updated" | "deleted",
     data: Record<string, unknown>,
   ) {
-    this.emitToAll("user:update", { action, data, timestamp: new Date() });
+    this.emitToAuthenticated("user:update", { action, data, timestamp: new Date() });
   }
 
   // Get connected client count

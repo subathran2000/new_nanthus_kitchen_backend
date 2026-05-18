@@ -8,13 +8,13 @@ export default () => ({
     port: parseInt(process.env.DATABASE_PORT ?? "5432", 10),
     name: process.env.DATABASE_NAME || "nanthus_kitchen",
     user: process.env.DATABASE_USER || "postgres",
-    password: process.env.DATABASE_PASSWORD || "password",
+    password: process.env.DATABASE_PASSWORD, // No default - must be set
   },
 
   jwt: {
-    secret: process.env.JWT_SECRET || "super-secret",
+    secret: process.env.JWT_SECRET, // No default - must be set
     expiration: process.env.JWT_EXPIRATION || "24h",
-    refreshSecret: process.env.JWT_REFRESH_SECRET || "refresh-secret",
+    refreshSecret: process.env.JWT_REFRESH_SECRET, // No default - must be set
     refreshExpiration: process.env.JWT_REFRESH_EXPIRATION || "7d",
   },
 

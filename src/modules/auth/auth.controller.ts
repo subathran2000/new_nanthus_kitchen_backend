@@ -52,7 +52,7 @@ export class AuthController {
   @Public()
   @UseGuards(LocalAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 50, ttl: 900000 } }) // 50 attempts per 15 minutes
+  @Throttle({ default: { limit: 10, ttl: 900000 } }) // 10 attempts per 15 minutes
   @ApiOperation({ summary: "Login user" })
   @ApiResponse({
     status: 200,
@@ -72,30 +72,13 @@ export class AuthController {
     const refreshCookieOptions = this.authService.getCookieOptions(true);
 
     this.logger.log(`Login for user: ${user.email}`);
-    this.logger.log(`Request origin: ${request.headers.origin}`);
-    this.logger.log(`Cookie options: ${JSON.stringify(cookieOptions)}`);
+    this.logger.debug(`Request origin: ${request.headers.origin}`);
 
     // Set cookies
     response.cookie("access_token", result.accessToken, cookieOptions);
     response.cookie("refresh_token", result.refreshToken, refreshCookieOptions);
 
     return result;
-  }
-
-  // Debug endpoint to check cookie configuration (remove in production)
-  @Get("debug/cookie-config")
-  @Public()
-  @ApiOperation({ summary: "Debug cookie configuration" })
-  async debugCookieConfig(@Req() request: Request) {
-    const cookieOptions = this.authService.getCookieOptions();
-    return {
-      requestOrigin: request.headers.origin,
-      requestHost: request.headers.host,
-      cookieOptions,
-      receivedCookies: Object.keys(request.cookies || {}),
-      hasAccessToken: !!request.cookies?.access_token,
-      hasRefreshToken: !!request.cookies?.refresh_token,
-    };
   }
 
   @Post("logout")
@@ -110,9 +93,22 @@ export class AuthController {
   ) {
     const result = await this.authService.logout(user.id);
 
-    // Clear cookies
-    response.clearCookie("access_token");
-    response.clearCookie("refresh_token");
+    // Clear cookies with the same options used to set them (required for proper clearing)
+    const cookieOptions = this.authService.getCookieOptions();
+    const refreshCookieOptions = this.authService.getCookieOptions(true);
+
+    response.clearCookie("access_token", {
+      httpOnly: cookieOptions.httpOnly,
+      secure: cookieOptions.secure,
+      sameSite: cookieOptions.sameSite,
+      path: cookieOptions.path,
+    });
+    response.clearCookie("refresh_token", {
+      httpOnly: refreshCookieOptions.httpOnly,
+      secure: refreshCookieOptions.secure,
+      sameSite: refreshCookieOptions.sameSite,
+      path: refreshCookieOptions.path,
+    });
 
     return result;
   }
@@ -154,7 +150,7 @@ export class AuthController {
   @Post("refresh")
   @Public()
   @UseGuards(JwtRefreshGuard)
-  @Throttle({ default: { limit: 1000, ttl: 60000 } }) // Very high limit for refresh endpoint
+  @Throttle({ default: { limit: 30, ttl: 60000 } }) // 30 per minute for refresh endpoint
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Refresh access token" })
   @ApiResponse({ status: 200, description: "Tokens refreshed" })
@@ -214,6 +210,7 @@ export class AuthController {
   @Post("verify-email")
   @Public()
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 20, ttl: 900000 } }) // 20 attempts per 15 minutes
   @ApiOperation({ summary: "Verify email with token" })
   @ApiResponse({ status: 200, description: "Email verified successfully" })
   async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {

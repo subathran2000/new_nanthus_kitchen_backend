@@ -31,8 +31,8 @@ async function resetDatabase() {
 
     await queryRunner.query(`DROP SCHEMA public CASCADE;`);
     await queryRunner.query(`CREATE SCHEMA public;`);
-    await queryRunner.query(`GRANT ALL ON SCHEMA public TO postgres;`);
-    await queryRunner.query(`GRANT ALL ON SCHEMA public TO public;`);
+    const dbUser = process.env.DATABASE_USER || "postgres";
+    await queryRunner.query(`GRANT ALL ON SCHEMA public TO "${dbUser}";`);
 
     console.log("✅ All tables dropped successfully");
     console.log("✅ Database reset complete");
