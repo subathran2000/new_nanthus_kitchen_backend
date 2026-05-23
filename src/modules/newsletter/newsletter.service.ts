@@ -25,6 +25,7 @@ import {
 } from "./dto/newsletter.dto";
 import { EmailService } from "../email/email.service";
 import { sanitizeHtml, sanitizeString } from "../../common/utils/sanitize";
+import { AdminWebSocketGateway } from "../websocket/websocket.gateway";
 
 @Injectable()
 export class NewsletterService {
@@ -38,8 +39,9 @@ export class NewsletterService {
     private readonly campaignRepository: Repository<NewsletterCampaign>,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
+    private readonly wsGateway: AdminWebSocketGateway,
   ) {
-    this.frontendUrl = this.configService.get<string>("FRONTEND_URL", "http://localhost:5173");
+    this.frontendUrl = this.configService.get<string>("FRONTEND_URL")!;
     this.logoUrl = this.configService.get<string>("LOGO_URL") ||
       `${this.frontendUrl}/new_nanthus_kitchen_logo.png`;
   }
@@ -66,7 +68,7 @@ export class NewsletterService {
 
       // Send welcome/confirmation email
       await this.sendConfirmationEmail(savedSubscriber);
-
+      this.wsGateway.emitNewsletterUpdate("subscriber", "created", savedSubscriber as unknown as Record<string, unknown>);
       return savedSubscriber;
     }
 
@@ -82,7 +84,7 @@ export class NewsletterService {
 
     // Send confirmation email with unsubscribe link
     await this.sendConfirmationEmail(savedSubscriber);
-
+    this.wsGateway.emitNewsletterUpdate("subscriber", "created", savedSubscriber as unknown as Record<string, unknown>);
     return savedSubscriber;
   }
 
@@ -165,7 +167,8 @@ export class NewsletterService {
     subscriber.isActive = false;
     subscriber.unsubscribedAt = new Date();
 
-    await this.subscriberRepository.save(subscriber);
+    const saved = await this.subscriberRepository.save(subscriber);
+    this.wsGateway.emitNewsletterUpdate("subscriber", "updated", saved as unknown as Record<string, unknown>);
   }
 
   async findAllSubscribers(query: SubscriberQueryDto): Promise<{
@@ -336,7 +339,9 @@ export class NewsletterService {
         : NewsletterStatus.DRAFT,
     });
 
-    return this.campaignRepository.save(campaign);
+    const saved = await this.campaignRepository.save(campaign);
+    this.wsGateway.emitNewsletterUpdate("campaign", "created", saved as unknown as Record<string, unknown>);
+    return saved;
   }
 
   async findAllCampaigns(query: CampaignQueryDto): Promise<{
@@ -416,7 +421,9 @@ export class NewsletterService {
 
     Object.assign(campaign, sanitizedData);
 
-    return this.campaignRepository.save(campaign);
+    const saved = await this.campaignRepository.save(campaign);
+    this.wsGateway.emitNewsletterUpdate("campaign", "updated", saved as unknown as Record<string, unknown>);
+    return saved;
   }
 
   async deleteCampaign(id: string): Promise<void> {
@@ -437,6 +444,7 @@ export class NewsletterService {
     }
 
     await this.campaignRepository.remove(campaign);
+    this.wsGateway.emitNewsletterUpdate("campaign", "deleted", { id });
   }
 
   async sendTestEmail(campaignId: string, testEmail: string): Promise<void> {
@@ -515,7 +523,9 @@ export class NewsletterService {
     campaign.successfulSends = successCount;
     campaign.failedSends = failCount;
 
-    return this.campaignRepository.save(campaign);
+    const result = await this.campaignRepository.save(campaign);
+    this.wsGateway.emitNewsletterUpdate("campaign", "sent", result as unknown as Record<string, unknown>);
+    return result;
   }
 
   private addUnsubscribeLink(

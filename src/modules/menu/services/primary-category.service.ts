@@ -11,12 +11,16 @@ import {
   UpdatePrimaryCategoryDto,
   ReorderDto,
 } from "../dto/category.dto";
+import { AdminWebSocketGateway } from "../../websocket/websocket.gateway";
+import { PublicWebSocketGateway } from "../../websocket/public-websocket.gateway";
 
 @Injectable()
 export class PrimaryCategoryService {
   constructor(
     @InjectRepository(PrimaryCategory)
-    private readonly primaryCategoryRepository: Repository<PrimaryCategory>
+    private readonly primaryCategoryRepository: Repository<PrimaryCategory>,
+    private readonly wsGateway: AdminWebSocketGateway,
+    private readonly publicWsGateway: PublicWebSocketGateway,
   ) {}
 
   async create(createDto: CreatePrimaryCategoryDto): Promise<PrimaryCategory> {
@@ -31,7 +35,10 @@ export class PrimaryCategoryService {
       sortOrder: createDto.sortOrder ?? (maxSortOrder?.max ?? -1) + 1,
     });
 
-    return this.primaryCategoryRepository.save(category);
+    const saved = await this.primaryCategoryRepository.save(category);
+    this.wsGateway.emitMenuUpdate("primaryCategory", "created", saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitMenuUpdate("primaryCategory", "created");
+    return saved;
   }
 
   async findAll(): Promise<PrimaryCategory[]> {
@@ -60,7 +67,10 @@ export class PrimaryCategoryService {
   ): Promise<PrimaryCategory> {
     const category = await this.findOne(id);
     Object.assign(category, updateDto);
-    return this.primaryCategoryRepository.save(category);
+    const saved = await this.primaryCategoryRepository.save(category);
+    this.wsGateway.emitMenuUpdate("primaryCategory", "updated", saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitMenuUpdate("primaryCategory", "updated");
+    return saved;
   }
 
   async remove(id: string): Promise<void> {
@@ -80,6 +90,8 @@ export class PrimaryCategoryService {
     }
 
     await this.primaryCategoryRepository.remove(category);
+    this.wsGateway.emitMenuUpdate("primaryCategory", "deleted", { id });
+    this.publicWsGateway.emitMenuUpdate("primaryCategory", "deleted");
   }
 
   async reorder(reorderDto: ReorderDto): Promise<void> {
@@ -90,11 +102,16 @@ export class PrimaryCategoryService {
     );
 
     await Promise.all(updates);
+    this.wsGateway.emitMenuUpdate("primaryCategory", "updated", {});
+    this.publicWsGateway.emitMenuUpdate("primaryCategory", "updated");
   }
 
   async toggleActive(id: string): Promise<PrimaryCategory> {
     const category = await this.findOne(id);
     category.isActive = !category.isActive;
-    return this.primaryCategoryRepository.save(category);
+    const saved = await this.primaryCategoryRepository.save(category);
+    this.wsGateway.emitMenuUpdate("primaryCategory", "updated", saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitMenuUpdate("primaryCategory", "updated");
+    return saved;
   }
 }

@@ -33,10 +33,7 @@ export class EmailService {
   }
 
   private getFrontendUrl(): string {
-    return this.configService.get<string>(
-      "FRONTEND_URL",
-      "http://localhost:5173"
-    );
+    return this.configService.get<string>("FRONTEND_URL")!;
   }
 
   private getRestaurantInfo() {

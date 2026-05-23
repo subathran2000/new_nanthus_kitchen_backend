@@ -29,6 +29,8 @@ async function bootstrap() {
     "JWT_SECRET",
     "JWT_REFRESH_SECRET",
     "DATABASE_PASSWORD",
+    "FRONTEND_URL",
+    "BACKEND_URL",
   ];
   for (const envVar of requiredEnvVars) {
     const value = configService.get<string>(envVar);
@@ -71,10 +73,7 @@ async function bootstrap() {
   });
 
   // CORS
-  const frontendUrl = configService.get<string>(
-    "FRONTEND_URL",
-    "http://localhost:5173",
-  );
+  const frontendUrl = configService.get<string>("FRONTEND_URL")!;
   const allowedOrigins = frontendUrl.split(",").map((url) => url.trim());
 
   // Log configured origins for debugging

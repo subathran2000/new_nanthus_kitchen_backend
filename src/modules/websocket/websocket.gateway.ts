@@ -40,7 +40,7 @@ interface NewsletterUpdateData extends WebSocketEventData {
       // Get allowed origins from environment
       const allowedOrigins = process.env.FRONTEND_URL?.split(",").map((url) =>
         url.trim(),
-      ) || ["http://localhost:5173", "http://localhost:3002"];
+      ) ?? [];
 
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) {

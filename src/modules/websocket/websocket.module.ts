@@ -2,6 +2,7 @@ import { Module, Global } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { AdminWebSocketGateway } from "./websocket.gateway";
+import { PublicWebSocketGateway } from "./public-websocket.gateway";
 
 @Global()
 @Module({
@@ -24,7 +25,7 @@ import { AdminWebSocketGateway } from "./websocket.gateway";
       inject: [ConfigService],
     }),
   ],
-  providers: [AdminWebSocketGateway],
-  exports: [AdminWebSocketGateway],
+  providers: [AdminWebSocketGateway, PublicWebSocketGateway],
+  exports: [AdminWebSocketGateway, PublicWebSocketGateway],
 })
 export class WebSocketModule {}

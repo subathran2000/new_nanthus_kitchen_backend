@@ -4,6 +4,8 @@ import { Repository, MoreThanOrEqual, LessThanOrEqual, Between } from "typeorm";
 import { Event } from "./entities/event.entity";
 import { CreateEventDto, UpdateEventDto, EventQueryDto } from "./dto/event.dto";
 import { UploadService } from "../upload/upload.service";
+import { AdminWebSocketGateway } from "../websocket/websocket.gateway";
+import { PublicWebSocketGateway } from "../websocket/public-websocket.gateway";
 
 @Injectable()
 export class EventsService {
@@ -11,11 +13,16 @@ export class EventsService {
     @InjectRepository(Event)
     private readonly eventRepository: Repository<Event>,
     private readonly uploadService: UploadService,
+    private readonly wsGateway: AdminWebSocketGateway,
+    private readonly publicWsGateway: PublicWebSocketGateway,
   ) {}
 
   async create(createDto: CreateEventDto): Promise<Event> {
     const event = this.eventRepository.create(createDto);
-    return this.eventRepository.save(event);
+    const saved = await this.eventRepository.save(event);
+    this.wsGateway.emitEventUpdate("created", saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitEventUpdate("created");
+    return saved;
   }
 
   async findAll(query: EventQueryDto): Promise<Event[]> {
@@ -105,7 +112,10 @@ export class EventsService {
     }
 
     Object.assign(event, updateDto);
-    return this.eventRepository.save(event);
+    const saved = await this.eventRepository.save(event);
+    this.wsGateway.emitEventUpdate("updated", saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitEventUpdate("updated");
+    return saved;
   }
 
   async remove(id: string): Promise<void> {
@@ -126,12 +136,17 @@ export class EventsService {
     }
 
     await this.eventRepository.remove(event);
+    this.wsGateway.emitEventUpdate("deleted", { id });
+    this.publicWsGateway.emitEventUpdate("deleted");
   }
 
   async toggleActive(id: string): Promise<Event> {
     const event = await this.findOne(id);
     event.isActive = !event.isActive;
-    return this.eventRepository.save(event);
+    const saved = await this.eventRepository.save(event);
+    this.wsGateway.emitEventUpdate("updated", saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitEventUpdate("updated");
+    return saved;
   }
 
   async getStatistics(): Promise<{

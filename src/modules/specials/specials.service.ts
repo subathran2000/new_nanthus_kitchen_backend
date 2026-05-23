@@ -14,13 +14,9 @@ import {
   getNowInToronto,
 } from "../../common/utils/timezone.util";
 import { UploadService } from "../upload/upload.service";
+import { AdminWebSocketGateway } from "../websocket/websocket.gateway";
+import { PublicWebSocketGateway } from "../websocket/public-websocket.gateway";
 
-/**
- * Specials Service
- *
- * Handles all business logic for restaurant specials.
- * All date/time operations use America/Toronto timezone.
- */
 @Injectable()
 export class SpecialsService {
   private readonly logger = new Logger(SpecialsService.name);
@@ -29,6 +25,8 @@ export class SpecialsService {
     @InjectRepository(Special)
     private readonly specialRepository: Repository<Special>,
     private readonly uploadService: UploadService,
+    private readonly wsGateway: AdminWebSocketGateway,
+    private readonly publicWsGateway: PublicWebSocketGateway,
   ) {}
 
   async create(createDto: CreateSpecialDto): Promise<Special> {
@@ -43,7 +41,10 @@ export class SpecialsService {
       sortOrder: createDto.sortOrder ?? (maxSortOrder?.max ?? -1) + 1,
     });
 
-    return this.specialRepository.save(special);
+    const saved = await this.specialRepository.save(special);
+    this.wsGateway.emitSpecialUpdate("created", saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitSpecialUpdate("created");
+    return saved;
   }
 
   async findAll(query: SpecialQueryDto): Promise<Special[]> {
@@ -199,7 +200,10 @@ export class SpecialsService {
     }
 
     Object.assign(special, updateDto);
-    return this.specialRepository.save(special);
+    const saved = await this.specialRepository.save(special);
+    this.wsGateway.emitSpecialUpdate("updated", saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitSpecialUpdate("updated");
+    return saved;
   }
 
   async remove(id: string): Promise<void> {
@@ -218,12 +222,17 @@ export class SpecialsService {
     }
 
     await this.specialRepository.remove(special);
+    this.wsGateway.emitSpecialUpdate("deleted", { id });
+    this.publicWsGateway.emitSpecialUpdate("deleted");
   }
 
   async toggleActive(id: string): Promise<Special> {
     const special = await this.findOne(id);
     special.isActive = !special.isActive;
-    return this.specialRepository.save(special);
+    const saved = await this.specialRepository.save(special);
+    this.wsGateway.emitSpecialUpdate("updated", saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitSpecialUpdate("updated");
+    return saved;
   }
 
   async reorder(reorderDto: ReorderSpecialsDto): Promise<void> {
@@ -232,6 +241,8 @@ export class SpecialsService {
     );
 
     await Promise.all(updates);
+    this.wsGateway.emitSpecialUpdate("updated", {});
+    this.publicWsGateway.emitSpecialUpdate("updated");
   }
 
   async getStatistics(): Promise<{

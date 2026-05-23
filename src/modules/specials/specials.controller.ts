@@ -132,7 +132,7 @@ export class SpecialsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Reorder specials" })
   @ApiResponse({ status: 204, description: "Specials reordered successfully" })
-  reorder(@Body() reorderDto: ReorderSpecialsDto) {
-    return this.specialsService.reorder(reorderDto);
+  async reorder(@Body() reorderDto: ReorderSpecialsDto) {
+    await this.specialsService.reorder(reorderDto);
   }
 }

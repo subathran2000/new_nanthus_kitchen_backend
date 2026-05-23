@@ -10,6 +10,7 @@ import {
 } from "../dto/menu-item.dto";
 import { ReorderDto } from "../dto/category.dto";
 import { AdminWebSocketGateway } from "../../websocket/websocket.gateway";
+import { PublicWebSocketGateway } from "../../websocket/public-websocket.gateway";
 import { UploadService } from "../../upload/upload.service";
 
 @Injectable()
@@ -20,6 +21,7 @@ export class MenuItemService {
     @InjectRepository(MenuItemMeasurement)
     private readonly measurementRepository: Repository<MenuItemMeasurement>,
     private readonly wsGateway: AdminWebSocketGateway,
+    private readonly publicWsGateway: PublicWebSocketGateway,
     private readonly uploadService: UploadService,
   ) {}
 
@@ -55,12 +57,8 @@ export class MenuItemService {
 
     const result = await this.findOne(savedItem.id);
 
-    // Emit WebSocket event
-    this.wsGateway.emitMenuUpdate(
-      "item",
-      "created",
-      result as unknown as Record<string, unknown>,
-    );
+    this.wsGateway.emitMenuUpdate("item", "created", result as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitMenuUpdate("item", "created");
 
     return result;
   }
@@ -175,12 +173,8 @@ export class MenuItemService {
 
     const result = await this.findOne(id);
 
-    // Emit WebSocket event
-    this.wsGateway.emitMenuUpdate(
-      "item",
-      "updated",
-      result as unknown as Record<string, unknown>,
-    );
+    this.wsGateway.emitMenuUpdate("item", "updated", result as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitMenuUpdate("item", "updated");
 
     return result;
   }
@@ -200,8 +194,8 @@ export class MenuItemService {
       }
     }
 
-    // Emit WebSocket event before removal
     this.wsGateway.emitMenuUpdate("item", "deleted", { id, name: item.name });
+    this.publicWsGateway.emitMenuUpdate("item", "deleted");
 
     await this.menuItemRepository.remove(item);
   }

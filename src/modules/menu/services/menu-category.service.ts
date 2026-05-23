@@ -11,12 +11,16 @@ import {
   UpdateMenuCategoryDto,
   ReorderDto,
 } from "../dto/category.dto";
+import { AdminWebSocketGateway } from "../../websocket/websocket.gateway";
+import { PublicWebSocketGateway } from "../../websocket/public-websocket.gateway";
 
 @Injectable()
 export class MenuCategoryService {
   constructor(
     @InjectRepository(MenuCategory)
     private readonly menuCategoryRepository: Repository<MenuCategory>,
+    private readonly wsGateway: AdminWebSocketGateway,
+    private readonly publicWsGateway: PublicWebSocketGateway,
   ) {}
 
   async create(createDto: CreateMenuCategoryDto): Promise<MenuCategory> {
@@ -34,7 +38,10 @@ export class MenuCategoryService {
       sortOrder: createDto.sortOrder ?? (maxSortOrder?.max ?? -1) + 1,
     });
 
-    return this.menuCategoryRepository.save(category);
+    const saved = await this.menuCategoryRepository.save(category);
+    this.wsGateway.emitMenuUpdate("category", "created", saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitMenuUpdate("category", "created");
+    return saved;
   }
 
   async findAll(primaryCategoryId?: string, location?: string): Promise<MenuCategory[]> {
@@ -89,7 +96,10 @@ export class MenuCategoryService {
   ): Promise<MenuCategory> {
     const category = await this.findOne(id);
     Object.assign(category, updateDto);
-    return this.menuCategoryRepository.save(category);
+    const saved = await this.menuCategoryRepository.save(category);
+    this.wsGateway.emitMenuUpdate("category", "updated", saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitMenuUpdate("category", "updated");
+    return saved;
   }
 
   async remove(id: string): Promise<void> {
@@ -109,6 +119,8 @@ export class MenuCategoryService {
     }
 
     await this.menuCategoryRepository.remove(category);
+    this.wsGateway.emitMenuUpdate("category", "deleted", { id });
+    this.publicWsGateway.emitMenuUpdate("category", "deleted");
   }
 
   async reorder(reorderDto: ReorderDto): Promise<void> {
@@ -119,12 +131,17 @@ export class MenuCategoryService {
     );
 
     await Promise.all(updates);
+    this.wsGateway.emitMenuUpdate("category", "updated", {});
+    this.publicWsGateway.emitMenuUpdate("category", "updated");
   }
 
   async toggleActive(id: string): Promise<MenuCategory> {
     const category = await this.findOne(id);
     category.isActive = !category.isActive;
-    return this.menuCategoryRepository.save(category);
+    const saved = await this.menuCategoryRepository.save(category);
+    this.wsGateway.emitMenuUpdate("category", "updated", saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitMenuUpdate("category", "updated");
+    return saved;
   }
 
   async getStatistics(): Promise<{

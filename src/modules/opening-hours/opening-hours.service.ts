@@ -15,18 +15,16 @@ import {
   isTimeBetween,
   formatTimeForDisplay,
 } from "../../common";
+import { AdminWebSocketGateway } from "../websocket/websocket.gateway";
+import { PublicWebSocketGateway } from "../websocket/public-websocket.gateway";
 
-/**
- * OpeningHoursService
- *
- * All time operations use America/Toronto timezone to ensure
- * accurate open/closed status regardless of server location.
- */
 @Injectable()
 export class OpeningHoursService {
   constructor(
     @InjectRepository(OpeningHours)
     private readonly openingHoursRepository: Repository<OpeningHours>,
+    private readonly wsGateway: AdminWebSocketGateway,
+    private readonly publicWsGateway: PublicWebSocketGateway,
   ) {}
 
   /**
@@ -47,13 +45,18 @@ export class OpeningHoursService {
     });
 
     if (existing) {
-      // Update existing record instead of creating duplicate
       Object.assign(existing, createDto);
-      return this.openingHoursRepository.save(existing);
+      const saved = await this.openingHoursRepository.save(existing);
+      this.wsGateway.emitOpeningHoursUpdate(saved as unknown as Record<string, unknown>);
+      this.publicWsGateway.emitOpeningHoursUpdate();
+      return saved;
     }
 
     const openingHours = this.openingHoursRepository.create(createDto);
-    return this.openingHoursRepository.save(openingHours);
+    const saved = await this.openingHoursRepository.save(openingHours);
+    this.wsGateway.emitOpeningHoursUpdate(saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitOpeningHoursUpdate();
+    return saved;
   }
 
   async findAll(query: OpeningHoursQueryDto): Promise<OpeningHours[]> {
@@ -171,7 +174,10 @@ export class OpeningHoursService {
   ): Promise<OpeningHours> {
     const openingHours = await this.findOne(id);
     Object.assign(openingHours, updateDto);
-    return this.openingHoursRepository.save(openingHours);
+    const saved = await this.openingHoursRepository.save(openingHours);
+    this.wsGateway.emitOpeningHoursUpdate(saved as unknown as Record<string, unknown>);
+    this.publicWsGateway.emitOpeningHoursUpdate();
+    return saved;
   }
 
   async bulkUpdate(
@@ -184,7 +190,10 @@ export class OpeningHoursService {
       return this.openingHoursRepository.save(openingHours);
     });
 
-    return Promise.all(updates);
+    const results = await Promise.all(updates);
+    this.wsGateway.emitOpeningHoursUpdate({});
+    this.publicWsGateway.emitOpeningHoursUpdate();
+    return results;
   }
 
   async remove(id: string): Promise<void> {

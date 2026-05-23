@@ -11,12 +11,14 @@ import { User } from "./entities/user.entity";
 import { CreateUserDto, UpdateUserDto } from "./dto/user.dto";
 import { UserRole } from "../../common/enums";
 import { v4 as uuidv4 } from "uuid";
+import { AdminWebSocketGateway } from "../websocket/websocket.gateway";
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly wsGateway: AdminWebSocketGateway,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -35,7 +37,9 @@ export class UsersService {
       emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
     });
 
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+    this.wsGateway.emitUserUpdate("created", saved as unknown as Record<string, unknown>);
+    return saved;
   }
 
   async findAll(currentUser: User): Promise<User[]> {
@@ -119,7 +123,9 @@ export class UsersService {
     }
 
     Object.assign(user, updateUserDto);
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+    this.wsGateway.emitUserUpdate("updated", saved as unknown as Record<string, unknown>);
+    return saved;
   }
 
   async remove(id: string, currentUser: User): Promise<void> {
@@ -136,6 +142,7 @@ export class UsersService {
         throw new ForbiddenException("Cannot delete another super admin");
       }
       await this.userRepository.remove(user);
+      this.wsGateway.emitUserUpdate("deleted", { id });
       return;
     }
 
@@ -147,6 +154,7 @@ export class UsersService {
         );
       }
       await this.userRepository.remove(user);
+      this.wsGateway.emitUserUpdate("deleted", { id });
       return;
     }
 
@@ -156,6 +164,7 @@ export class UsersService {
         throw new ForbiddenException("Managers can only delete visitors");
       }
       await this.userRepository.remove(user);
+      this.wsGateway.emitUserUpdate("deleted", { id });
       return;
     }
 
