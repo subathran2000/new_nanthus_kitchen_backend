@@ -52,6 +52,15 @@ export class MenuItem extends BaseEntity {
   @Column({ name: "has_measurements", default: false })
   hasMeasurements: boolean;
 
+  @Column({ name: "location_availability", default: "both" })
+  locationAvailability: string; // 'both' | 'scarborough' | 'markham'
+
+  @Column({ name: "price_scarborough", type: "decimal", precision: 10, scale: 2, nullable: true })
+  priceScarborough: number | null;
+
+  @Column({ name: "price_markham", type: "decimal", precision: 10, scale: 2, nullable: true })
+  priceMarkham: number | null;
+
   @OneToMany(() => MenuItemMeasurement, (measurement) => measurement.menuItem, {
     cascade: true,
   })

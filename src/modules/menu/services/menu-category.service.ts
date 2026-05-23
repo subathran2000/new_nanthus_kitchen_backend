@@ -37,12 +37,22 @@ export class MenuCategoryService {
     return this.menuCategoryRepository.save(category);
   }
 
-  async findAll(primaryCategoryId?: string): Promise<MenuCategory[]> {
+  async findAll(primaryCategoryId?: string, location?: string): Promise<MenuCategory[]> {
     const queryBuilder = this.menuCategoryRepository
       .createQueryBuilder("category")
       .leftJoinAndSelect("category.primaryCategory", "primaryCategory")
-      .leftJoinAndSelect("category.items", "items")
       .orderBy("category.sortOrder", "ASC");
+
+    if (location) {
+      queryBuilder.leftJoinAndSelect(
+        "category.items",
+        "items",
+        "items.locationAvailability IN ('both', :location) AND items.isAvailable = true",
+        { location },
+      );
+    } else {
+      queryBuilder.leftJoinAndSelect("category.items", "items");
+    }
 
     if (primaryCategoryId) {
       queryBuilder.where("category.primaryCategoryId = :primaryCategoryId", {
@@ -50,7 +60,14 @@ export class MenuCategoryService {
       });
     }
 
-    return queryBuilder.getMany();
+    const categories = await queryBuilder.getMany();
+
+    // When filtering by location, drop empty categories
+    if (location) {
+      return categories.filter((c) => c.items && c.items.length > 0);
+    }
+
+    return categories;
   }
 
   async findOne(id: string): Promise<MenuCategory> {

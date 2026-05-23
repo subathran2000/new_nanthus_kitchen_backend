@@ -6,6 +6,7 @@ import {
   IsArray,
   IsUUID,
   IsEnum,
+  IsIn,
   Min,
   Max,
   ValidateNested,
@@ -81,6 +82,23 @@ export class CreateMenuItemDto {
   @IsOptional()
   hasMeasurements?: boolean;
 
+  @ApiPropertyOptional({ enum: ["both", "scarborough", "markham"], default: "both" })
+  @IsIn(["both", "scarborough", "markham"])
+  @IsOptional()
+  locationAvailability?: string;
+
+  @ApiPropertyOptional({ example: 15.99 })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  priceScarborough?: number | null;
+
+  @ApiPropertyOptional({ example: 16.99 })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  priceMarkham?: number | null;
+
   @ApiPropertyOptional({ type: [MenuItemMeasurementDto] })
   @IsArray()
   @ValidateNested({ each: true })
@@ -145,6 +163,23 @@ export class UpdateMenuItemDto {
   @IsOptional()
   hasMeasurements?: boolean;
 
+  @ApiPropertyOptional({ enum: ["both", "scarborough", "markham"] })
+  @IsIn(["both", "scarborough", "markham"])
+  @IsOptional()
+  locationAvailability?: string;
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  priceScarborough?: number | null;
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  priceMarkham?: number | null;
+
   @ApiPropertyOptional({ type: [MenuItemMeasurementDto] })
   @IsArray()
   @ValidateNested({ each: true })
@@ -179,4 +214,10 @@ export class MenuItemQueryDto {
   @IsEnum(DietaryInfo)
   @IsOptional()
   dietaryInfo?: DietaryInfo;
+
+  @ApiPropertyOptional({ enum: ["scarborough", "markham"] })
+  @IsString()
+  @IsIn(["scarborough", "markham"])
+  @IsOptional()
+  location?: string;
 }

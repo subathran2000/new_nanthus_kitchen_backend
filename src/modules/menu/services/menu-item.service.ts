@@ -99,6 +99,13 @@ export class MenuItemService {
       });
     }
 
+    if (query.location) {
+      queryBuilder.andWhere(
+        "item.locationAvailability IN ('both', :location)",
+        { location: query.location },
+      );
+    }
+
     return queryBuilder.getMany();
   }
 

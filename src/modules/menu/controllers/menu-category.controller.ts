@@ -48,9 +48,13 @@ export class MenuCategoryController {
   @Public()
   @ApiOperation({ summary: "Get all menu categories" })
   @ApiQuery({ name: "primaryCategoryId", required: false })
+  @ApiQuery({ name: "location", required: false, enum: ["scarborough", "markham"] })
   @ApiResponse({ status: 200, description: "List of menu categories" })
-  async findAll(@Query("primaryCategoryId") primaryCategoryId?: string) {
-    return this.menuCategoryService.findAll(primaryCategoryId);
+  async findAll(
+    @Query("primaryCategoryId") primaryCategoryId?: string,
+    @Query("location") location?: string,
+  ) {
+    return this.menuCategoryService.findAll(primaryCategoryId, location);
   }
 
   @Get("statistics")
