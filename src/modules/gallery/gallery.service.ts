@@ -11,6 +11,7 @@ import {
   CreateGalleryItemDto,
   UpdateGalleryItemDto,
   GalleryItemQueryDto,
+  BulkCreateGalleryItemsDto,
   CreateGalleryCategoryDto,
   UpdateGalleryCategoryDto,
   GalleryCategoryQueryDto,
@@ -107,6 +108,21 @@ export class GalleryService {
     const saved = await this.itemRepo.save(item);
     this.publicWs.emitGalleryUpdate("created");
     return this.findOneItem(saved.id);
+  }
+
+  async bulkCreateItems(dto: BulkCreateGalleryItemsDto): Promise<GalleryItem[]> {
+    // Validate all category IDs upfront
+    const categoryIds = [...new Set(dto.items.map((i) => i.categoryId).filter(Boolean))];
+    for (const id of categoryIds) {
+      await this.findOneCategory(id as string);
+    }
+
+    const entities = dto.items.map((itemDto) => this.itemRepo.create(itemDto));
+    const saved = await this.itemRepo.save(entities);
+    this.publicWs.emitGalleryUpdate("created");
+
+    // Return fully loaded items with category relation
+    return Promise.all(saved.map((s) => this.findOneItem(s.id)));
   }
 
   async findAllItems(query: GalleryItemQueryDto): Promise<GalleryItem[]> {

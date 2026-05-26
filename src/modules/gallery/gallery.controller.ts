@@ -22,6 +22,7 @@ import {
   CreateGalleryItemDto,
   UpdateGalleryItemDto,
   GalleryItemQueryDto,
+  BulkCreateGalleryItemsDto,
   CreateGalleryCategoryDto,
   UpdateGalleryCategoryDto,
   GalleryCategoryQueryDto,
@@ -144,10 +145,20 @@ export class GalleryController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(...ADMIN_ROLES)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Create gallery item" })
+  @ApiOperation({ summary: "Create single gallery item" })
   @ApiResponse({ status: 201, description: "Gallery item created" })
   createItem(@Body() dto: CreateGalleryItemDto) {
     return this.galleryService.createItem(dto);
+  }
+
+  @Post("bulk-items")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...ADMIN_ROLES)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Create multiple gallery items at once" })
+  @ApiResponse({ status: 201, description: "Gallery items created" })
+  bulkCreateItems(@Body() dto: BulkCreateGalleryItemsDto) {
+    return this.galleryService.bulkCreateItems(dto);
   }
 
   @Patch(":id")

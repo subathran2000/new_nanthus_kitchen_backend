@@ -6,6 +6,8 @@ import {
   IsNumber,
   IsNotEmpty,
   IsUUID,
+  IsArray,
+  ValidateNested,
   Min,
   Matches,
 } from "class-validator";
@@ -103,6 +105,14 @@ export class CreateGalleryItemDto {
 }
 
 export class UpdateGalleryItemDto extends PartialType(CreateGalleryItemDto) {}
+
+export class BulkCreateGalleryItemsDto {
+  @ApiProperty({ type: [CreateGalleryItemDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateGalleryItemDto)
+  items: CreateGalleryItemDto[];
+}
 
 export class GalleryItemQueryDto {
   @ApiPropertyOptional({ description: "Filter by category UUID" })
