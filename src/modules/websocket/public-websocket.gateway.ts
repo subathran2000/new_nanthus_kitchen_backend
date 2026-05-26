@@ -76,4 +76,8 @@ export class PublicWebSocketGateway
   emitOpeningHoursUpdate() {
     this.emit("openingHours:update", {});
   }
+
+  emitGalleryUpdate(action: "created" | "updated" | "deleted") {
+    this.emit("gallery:update", { action });
+  }
 }

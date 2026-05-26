@@ -9,7 +9,7 @@ import { UploadController } from "./upload.controller";
     MulterModule.register({
       storage: memoryStorage(),
       limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB
+        fileSize: 50 * 1024 * 1024, // 50MB (gallery videos; lower limits enforced per-folder in service)
       },
     }),
   ],

@@ -17,13 +17,24 @@ export class UploadService {
   private readonly maxFileSize: number;
   private readonly allowedMimeTypes: string[];
 
+  // Per-folder max sizes: gallery images 1MB, gallery videos 50MB
+  private static readonly GALLERY_IMAGE_MAX = 1 * 1024 * 1024;
+  private static readonly GALLERY_VIDEO_MAX = 50 * 1024 * 1024;
+
+  private static readonly VIDEO_MIME_TYPES = [
+    "video/mp4",
+    "video/webm",
+    "video/ogg",
+    "video/quicktime",
+  ];
+
   constructor(private readonly configService: ConfigService) {
     this.uploadPath =
       this.configService.get<string>("UPLOAD_PATH") || "./uploads";
     this.baseUrl =
       this.configService.get<string>("UPLOAD_BASE_URL") || "/uploads";
     this.maxFileSize =
-      this.configService.get<number>("MAX_FILE_SIZE") || 5 * 1024 * 1024; // 5MB
+      this.configService.get<number>("MAX_FILE_SIZE") || 5 * 1024 * 1024; // 5MB default
     this.allowedMimeTypes = [
       "image/jpeg",
       "image/png",
@@ -50,7 +61,7 @@ export class UploadService {
     folder: UploadFolder,
     customFilename?: string
   ): Promise<FileResponseDto> {
-    this.validateFile(file);
+    this.validateFile(file, folder);
 
     const ext = path.extname(file.originalname);
     
@@ -188,22 +199,50 @@ export class UploadService {
     return files.map((file) => `${folder}/${file}`);
   }
 
-  private validateFile(file: Express.Multer.File): void {
+  private validateFile(file: Express.Multer.File, folder?: UploadFolder): void {
     if (!file) {
       throw new BadRequestException("No file provided");
     }
 
-    if (file.size > this.maxFileSize) {
-      throw new BadRequestException(
-        `File size exceeds maximum allowed size of ${this.maxFileSize / 1024 / 1024}MB`
-      );
-    }
+    const isVideo = UploadService.VIDEO_MIME_TYPES.includes(file.mimetype);
 
-    if (!this.allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException(
-        `File type ${file.mimetype} is not allowed. Allowed types: ${this.allowedMimeTypes.join(", ")}`
-      );
+    if (folder === UploadFolder.GALLERY) {
+      if (isVideo) {
+        if (file.size > UploadService.GALLERY_VIDEO_MAX) {
+          throw new BadRequestException(
+            `Video file size exceeds the 50MB limit for gallery uploads`
+          );
+        }
+      } else {
+        const allowedImageTypes = [...this.allowedMimeTypes];
+        if (!allowedImageTypes.includes(file.mimetype)) {
+          throw new BadRequestException(
+            `File type ${file.mimetype} is not allowed. Allowed types: images (JPEG, PNG, GIF, WebP) or videos (MP4, WebM, OGG, MOV)`
+          );
+        }
+        if (file.size > UploadService.GALLERY_IMAGE_MAX) {
+          throw new BadRequestException(
+            `Image file size exceeds the 1MB limit for gallery uploads`
+          );
+        }
+      }
+    } else {
+      if (file.size > this.maxFileSize) {
+        throw new BadRequestException(
+          `File size exceeds maximum allowed size of ${this.maxFileSize / 1024 / 1024}MB`
+        );
+      }
+
+      if (!this.allowedMimeTypes.includes(file.mimetype)) {
+        throw new BadRequestException(
+          `File type ${file.mimetype} is not allowed. Allowed types: ${this.allowedMimeTypes.join(", ")}`
+        );
+      }
     }
+  }
+
+  isVideoFile(mimetype: string): boolean {
+    return UploadService.VIDEO_MIME_TYPES.includes(mimetype);
   }
 
   // Utility to get URL from stored path

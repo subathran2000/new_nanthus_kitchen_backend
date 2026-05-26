@@ -7,6 +7,7 @@ export enum UploadFolder {
   SPECIALS = "specials",
   NEWSLETTER = "newsletter",
   GENERAL = "general",
+  GALLERY = "gallery",
 }
 
 export class UploadFileDto {

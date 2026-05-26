@@ -17,6 +17,7 @@ import { EmailModule } from "./modules/email/email.module";
 import { WebSocketModule } from "./modules/websocket/websocket.module";
 import { HealthModule } from "./modules/health/health.module";
 import { ContactModule } from "./modules/contact/contact.module";
+import { GalleryModule } from "./modules/gallery/gallery.module";
 
 // Configuration
 import configuration from "./config/configuration";
@@ -65,6 +66,7 @@ import { databaseConfig } from "./config/database.config";
     WebSocketModule,
     HealthModule,
     ContactModule,
+    GalleryModule,
   ],
   providers: [
     {
